@@ -196,4 +196,4 @@ tree.fitness(npdata)
         giniChildren = (((totalLeft/childrenTotal) * giniLeft) + ((totalRight/childrenTotal) * giniRight))
         allGini = [giniLeft, giniRight, giniChildren]
         print(allGini)
-        return(giniChildren)Idreamofpie"""
+        return(giniChildren)"""
