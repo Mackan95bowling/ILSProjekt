@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
+import sklearn.cross_validation
 
 
-
-"""Test, funkar det att pusha?"""
 
 class DecisionTree:
     def __init__(self, criterion , max_features, max_depth , min_samples_leaf):
@@ -16,6 +15,14 @@ class DecisionTree:
 
     def fitness(self, X,):
         self.root.insert(X)
+
+    def predict(self, X):
+        predictions = []
+        for item in X:
+            prediction = self.root.search(item)
+            predictions.append(prediction)
+        return(predictions)
+
 
 class Node:
 
@@ -32,30 +39,48 @@ class Node:
         self.list = None
         self.classValue = None
 
+    def search(self, X):
+
+        if self.classValue == None:
+            if X[self.indexSplit] > self.ValueSplit:
+                predict = self.left.search(X)
+            else:
+                predict = self.right.search(X)
+            return(predict)
+        else:
+            return(self.classValue)
 
 
     def insert(self, X):
         self.range = X[0:1].size -1
         self.max_depth = self.max_depth -1
-        if (self.max_depth ==0):
+        if (self.allDistingt(X)):
             self.classValue= self.findClassValue(X)
 
+        elif (self.max_depth ==0):
+            self.classValue= self.findClassValue(X)
 
         elif (len(X)< self.min_sample_leaf):
             self.classValue= self.findClassValue(X)
 
-
         else:
-
             self.values = X
             self.findValues(X)
             self.testSplit(X)
             self.split(X)
 
+    def allDistingt(self, X):
+        distClassValues = []
+        for item in X:
+            if not(distClassValues.__contains__(item[self.range])): # save distingt classes
+                distClassValues.append(item[self.range])
+                if (len(distClassValues) > 1):
+                    return(False)
+        return(True)
+
     def findClassValue(self, X):
         distClassValues = []
         for item in X:
-            print(item[self.range])
             if not(distClassValues.__contains__(item[self.range])): # save distingt classes
                 distClassValues.append(item[self.range])
 
@@ -69,7 +94,6 @@ class Node:
             if count[i] > max:
                 max = count[i]
                 classValue = distClassValues[i]
-        print(classValue)
         return(classValue)
 
     def split(self, X):
@@ -82,6 +106,10 @@ class Node:
                 right.append(row)
         numpyLeft = np.array(left)
         numpyRight= np.array(right)
+        self.left = Node(self, self.max_depth, self.min_sample_leaf)
+        self.right = Node(self, self.max_depth, self.min_sample_leaf)
+        self.left.insert(numpyLeft)
+        self.right.insert(numpyRight)
 
 
     def findValues(self, X):
@@ -95,72 +123,7 @@ class Node:
             self.list.append(test)
 
 
-    def gini(self, child):
-        distinctClasses = []
-        for item in child:
-            if not(distinctClasses.__contains__(item)): # save distingt classes
-                distinctClasses.append(item)
-
-        count = np.zeros(len(distinctClasses))
-        for j in range(len(distinctClasses)):
-            for i in range(len(child)):
-                if distinctClasses[j] == child[i]:
-                    count[j] = count[j] + 1
-        totalLeft = len(child)
-
-        giniValue = 1
-        for value in count:
-            giniValue = giniValue - (value/totalLeft)**2
-
-        return(giniValue)
-
-
-
-    def testSplit(self, X):
-        bestGini = 999
-        for i in xrange(self.range):
-            for j in xrange(len(self.list[i])-1):
-                left = []
-                right = []
-                for row in X:
-                    lastIndex = len(row)-1
-                    if row[i] > self.list[i][j]:
-                        left.append(row[lastIndex])
-                    else:
-                        right.append(row[lastIndex])
-                giniLeft = self.gini(left)
-                giniRight = self.gini(right)
-
-
-                """giniValue = self.gini(left, right)
-                if giniValue < bestGini:
-                    bestGini = giniValue
-                    self.indexSplit = i
-                    self.ValueSplit = self.list[i][j]"""
-
-
-
-
-
-def str_column_to_float(dataset, column):
-    for row in dataset:
-        row[column] = float(row[column].strip())
-
-data = pd.read_csv(r"F:\Tree\binary\balance-scale.csv", header = None)
-npdata = np.array(data[1:])
-tree = DecisionTree(1,1,10,800)
-for i in range(len(npdata[0])-1):
-    str_column_to_float(npdata[0:, 0:4], i)
-tree.fitness(npdata)
-
-
-
-
-
-
-
-
-"""    def gini(self, left, right):
+    def gini(self, left, right):
         leftClass = []
         for item in left:
             if not(leftClass.__contains__(item)): # save distingt classes in left
@@ -194,6 +157,75 @@ tree.fitness(npdata)
 
         childrenTotal = float(totalRight) + float(totalLeft)
         giniChildren = (((totalLeft/childrenTotal) * giniLeft) + ((totalRight/childrenTotal) * giniRight))
-        allGini = [giniLeft, giniRight, giniChildren]
-        print(allGini)
-        return(giniChildren)"""
+        return(giniChildren)
+
+
+
+    def testSplit(self, X):
+        bestGini = 999
+        for i in xrange(self.range):
+            for j in xrange(len(self.list[i])-1):
+                left = []
+                right = []
+                for row in X:
+                    lastIndex = len(row)-1
+                    if row[i] > self.list[i][j]:
+                        left.append(row[lastIndex])
+                    else:
+                        right.append(row[lastIndex])
+
+                giniValue = self.gini(left, right)
+                if giniValue < bestGini:
+                    bestGini = giniValue
+                    self.indexSplit = i
+                    self.ValueSplit = self.list[i][j]
+
+def str_column_to_float(dataset, column):
+    for row in dataset:
+        row[column] = float(row[column].strip())
+
+def refactor_data(X,Y):
+    row = []
+    i = 0
+    for element in X:
+        out = np.append(element, Y[i])
+        row.append(out)
+        i = i + 1
+    data = np.array(row)
+    for i in range(len(data[0])-1):
+        str_column_to_float(data[0:, :-1], i)
+    return(data)
+
+def getAccuracy(prediction, answer):
+    total = 0
+    for i in range(len(prediction)):
+        if prediction[i] == answer[i]:
+            total = total + 1
+    accuracy = total / (float)(i + 1)
+    return(accuracy)
+
+
+
+
+
+
+
+data = pd.read_csv(r"F:\Tree\binary\balance-scale.csv", header = None)
+npdata = np.array(data)
+X_data = npdata[1:, :-1]
+y_data = npdata[1:, -1:]
+
+
+X_train, X_test, y_train, y_test = sklearn.cross_validation.train_test_split(X_data, y_data, test_size=0.33, random_state=42)
+
+
+my_trainData = refactor_data(X_train, y_train)
+my_predictData = refactor_data(X_test, y_test)
+
+
+
+tree = DecisionTree(1,1,20,30)
+tree.fitness(my_trainData)
+prediction = tree.predict(my_predictData)
+accuracy = getAccuracy(prediction, y_test)
+print(accuracy)
