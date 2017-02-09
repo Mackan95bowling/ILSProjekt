@@ -3,7 +3,7 @@ import pandas as pd
 
 
 
-
+"""Test, funkar det att pusha?"""
 
 class DecisionTree:
     def __init__(self, criterion , max_features, max_depth , min_samples_leaf):
